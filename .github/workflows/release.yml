@@ -20,7 +20,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build artifacts
-        run: ./gradlew --no-daemon Mod:packJar
+        run: ./gradlew --no-daemon shadowJar
         env:
           GITHUB_VERSION: ${{ github.event.release.tag_name }}
 
@@ -31,5 +31,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./build/libs/Bot-Remover.jar
-          asset_name: ModLib.jar
+          asset_name: Bot-Remover.jar
           asset_content_type: application/zip
