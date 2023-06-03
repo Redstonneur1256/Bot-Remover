@@ -9,3 +9,4 @@ anuken-arc = { module = "com.github.Anuken.Arc:arc-core", version.ref = "mindust
 anuken-mindustry = { module = "com.github.Anuken.Mindustry:core", version.ref = "mindustry" }
 ipaddress = "com.github.seancfoley:ipaddress:5.4.0"
 modlib = "com.github.Redstonneur1256.Mindustry-ModLib:Mod:1.4.5"
+unifiedmetrics-api = "dev.cubxity.plugins:unifiedmetrics-api:0.3.6"

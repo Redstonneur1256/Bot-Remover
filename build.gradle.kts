@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "fr.redstonneur1256"
-version = "1.3.1"
+version = "1.3.2"
 
 repositories {
     mavenCentral()
@@ -16,6 +16,7 @@ dependencies {
     compileOnly(libs.anuken.arc)
     compileOnly(libs.anuken.mindustry)
     compileOnly(libs.modlib)
+    compileOnly(libs.unifiedmetrics.api)
     implementation(libs.ipaddress)
 }
 

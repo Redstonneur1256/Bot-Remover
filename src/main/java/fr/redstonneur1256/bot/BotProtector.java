@@ -1,15 +1,19 @@
 package fr.redstonneur1256.bot;
 
+import arc.Events;
 import arc.struct.Seq;
 import arc.util.CommandHandler;
 import arc.util.Log;
 import arc.util.Threads;
 import arc.util.Timer;
+import fr.redstonneur1256.bot.hooks.unifiedmetrics.UnifiedMetricsHook;
 import fr.redstonneur1256.bot.provider.BlockListProvider;
 import fr.redstonneur1256.bot.provider.GoogleCloudBlockListProvider;
 import fr.redstonneur1256.bot.provider.LocalAzureBlockListProvider;
 import fr.redstonneur1256.bot.provider.RawBlockListProvider;
 import inet.ipaddr.IPAddressString;
+import mindustry.Vars;
+import mindustry.game.EventType;
 import mindustry.mod.Plugin;
 
 import java.net.MalformedURLException;
@@ -40,6 +44,12 @@ public class BotProtector extends Plugin {
 
         reload();
         Timer.schedule(() -> Threads.daemon(this::reload), 3600, 3600);
+
+        Events.run(EventType.ServerLoadEvent.class, () -> {
+            if (Vars.mods.getMod("unifiedmetrics") != null) {
+                UnifiedMetricsHook.hook();
+            }
+        });
     }
 
     @Override
