@@ -1,14 +1,18 @@
 package fr.redstonneur1256.bot;
 
+import arc.struct.Seq;
 import arc.util.CommandHandler;
 import arc.util.Log;
-import arc.util.serialization.Jval;
+import arc.util.Threads;
+import arc.util.Timer;
+import fr.redstonneur1256.bot.provider.BlockListProvider;
+import fr.redstonneur1256.bot.provider.LocalAzureBlockListProvider;
+import fr.redstonneur1256.bot.provider.RawBlockListProvider;
 import inet.ipaddr.IPAddressString;
 import mindustry.mod.Plugin;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,27 +20,39 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BotProtector extends Plugin {
 
     public static final AtomicInteger blocked = new AtomicInteger();
-    public static final Set<IPAddressString> addresses = new HashSet<>();
+    public static Set<IPAddressString> addresses = new HashSet<>();
+
+    private Seq<BlockListProvider> providers;
 
     @Override
     public void init() {
-        try (InputStream stream = BotProtector.class.getResourceAsStream("/azure.json")) {
-            if (stream != null) {
-                for (Jval value : Jval.read(new InputStreamReader(stream)).get("values").asArray()) {
-                    for (Jval addressPrefixes : value.get("properties").get("addressPrefixes").asArray()) {
-                        addresses.add(new IPAddressString(addressPrefixes.asString()));
-                    }
-                }
-            }
-        } catch (IOException exception) {
-            Log.err("Failed to load internal azure addresses", exception);
+        try {
+            providers = Seq.with(
+                    new RawBlockListProvider(new URL("https://raw.githubusercontent.com/X4BNet/lists_vpn/main/output/datacenter/ipv4.txt")),
+                    new LocalAzureBlockListProvider()
+            );
+        } catch (MalformedURLException exception) {
+            throw new RuntimeException(exception);
         }
-        Log.info("[Bot-Protector] Loaded @ azure address masks.", addresses.size());
+
+        reload();
+        Timer.schedule(() -> Threads.daemon(this::reload), 3600, 3600);
     }
 
     @Override
     public void registerServerCommands(CommandHandler handler) {
         handler.register("conns", "Displays stats", args -> Log.info("Blocked @ connections", blocked.get()));
+    }
+
+    private void reload() {
+        Set<IPAddressString> addresses = new HashSet<>();
+
+        for (BlockListProvider provider : providers) {
+            addresses.addAll(provider.provide());
+        }
+
+        Log.info("[Bot-Protector] (re)loaded @ addresses", addresses.size());
+        BotProtector.addresses = addresses;
     }
 
 }
