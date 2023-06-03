@@ -14,6 +14,11 @@ import java.util.Set;
 public class LocalAzureBlockListProvider implements BlockListProvider {
 
     @Override
+    public String getName() {
+        return "Azure";
+    }
+
+    @Override
     public Set<IPAddressString> provide() {
         try (InputStream stream = BotProtector.class.getResourceAsStream("/azure.json")) {
             if (stream == null) {

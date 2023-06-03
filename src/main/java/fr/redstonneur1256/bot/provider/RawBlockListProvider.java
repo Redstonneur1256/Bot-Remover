@@ -22,6 +22,11 @@ public class RawBlockListProvider implements BlockListProvider {
     }
 
     @Override
+    public String getName() {
+        return url.toString();
+    }
+
+    @Override
     public Set<IPAddressString> provide() {
         try {
             URLConnection connection = url.openConnection();

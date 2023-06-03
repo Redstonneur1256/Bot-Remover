@@ -6,6 +6,7 @@ import arc.util.Log;
 import arc.util.Threads;
 import arc.util.Timer;
 import fr.redstonneur1256.bot.provider.BlockListProvider;
+import fr.redstonneur1256.bot.provider.GoogleCloudBlockListProvider;
 import fr.redstonneur1256.bot.provider.LocalAzureBlockListProvider;
 import fr.redstonneur1256.bot.provider.RawBlockListProvider;
 import inet.ipaddr.IPAddressString;
@@ -29,6 +30,8 @@ public class BotProtector extends Plugin {
         try {
             providers = Seq.with(
                     new RawBlockListProvider(new URL("https://raw.githubusercontent.com/X4BNet/lists_vpn/main/output/datacenter/ipv4.txt")),
+                    new GoogleCloudBlockListProvider("https://www.gstatic.com/ipranges/goog.json"),
+                    new GoogleCloudBlockListProvider("https://www.gstatic.com/ipranges/cloud.json"),
                     new LocalAzureBlockListProvider()
             );
         } catch (MalformedURLException exception) {
@@ -42,13 +45,17 @@ public class BotProtector extends Plugin {
     @Override
     public void registerServerCommands(CommandHandler handler) {
         handler.register("conns", "Displays stats", args -> Log.info("Blocked @ connections", blocked.get()));
+        handler.register("bl-reload", "Reloads the IP blacklist", args -> Threads.daemon(this::reload));
     }
 
     private void reload() {
         Set<IPAddressString> addresses = new HashSet<>();
 
         for (BlockListProvider provider : providers) {
-            addresses.addAll(provider.provide());
+            Set<IPAddressString> found = provider.provide();
+            addresses.addAll(found);
+
+            Log.debug("[Bot-Protector] Found @ addresses for blocklist @", found.size(), provider.getName());
         }
 
         Log.info("[Bot-Protector] (re)loaded @ addresses", addresses.size());

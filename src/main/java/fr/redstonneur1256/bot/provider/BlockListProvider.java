@@ -6,6 +6,8 @@ import java.util.Set;
 
 public interface BlockListProvider {
 
+    String getName();
+
     Set<IPAddressString> provide();
 
 }
