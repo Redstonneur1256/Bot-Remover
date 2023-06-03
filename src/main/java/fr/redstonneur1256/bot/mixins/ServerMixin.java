@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 
 @Mixin(Server.class)
@@ -19,13 +20,17 @@ public class ServerMixin {
     @Inject(method = "acceptOperation", at = @At("HEAD"), cancellable = true)
     private void injectAccept(SocketChannel channel, CallbackInfo ci) {
         try {
-            if (channel.getRemoteAddress() instanceof InetSocketAddress inetAddress) {
-                IPAddressString address = new IPAddressString(inetAddress.getAddress().getHostAddress());
+            SocketAddress remote = channel.getRemoteAddress();
+
+            if (remote instanceof InetSocketAddress) {
+                IPAddressString address = new IPAddressString(((InetSocketAddress) remote).getAddress().getHostAddress());
 
                 for (IPAddressString blacklisted : BotProtector.addresses) {
                     if (blacklisted.contains(address)) {
                         ci.cancel();
                         channel.close();
+
+                        BotProtector.blocked.incrementAndGet();
                         return;
                     }
                 }
@@ -33,7 +38,7 @@ public class ServerMixin {
                 return;
             }
 
-            Log.warn("[Bot-Protector] Unknown type of address @", channel.getRemoteAddress().getClass().getName());
+            Log.warn("[Bot-Protector] Unknown type of address @", remote.getClass().getName());
         } catch (IOException exception) {
             Log.err("[Bot-Protector]", exception);
         }

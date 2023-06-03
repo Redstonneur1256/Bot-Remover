@@ -1,60 +1,42 @@
 package fr.redstonneur1256.bot;
 
-import arc.files.Fi;
-import arc.util.Http;
+import arc.util.CommandHandler;
 import arc.util.Log;
-import arc.util.Threads;
-import arc.util.Timer;
 import arc.util.serialization.Jval;
 import inet.ipaddr.IPAddressString;
-import mindustry.Vars;
 import mindustry.mod.Plugin;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class BotProtector extends Plugin {
 
-    public static Set<IPAddressString> addresses = new HashSet<>();
+    public static final AtomicInteger blocked = new AtomicInteger();
+    public static final Set<IPAddressString> addresses = new HashSet<>();
 
     @Override
     public void init() {
-        reloadGitHubMeta();
-        Timer.schedule(() -> Threads.daemon(this::reloadGitHubMeta), 3601, 3601);
-    }
-
-    private void reloadGitHubMeta() {
-        Log.debug("[Bot-Protector] (re)loading GitHub actions IPs");
-
-        Fi file = Vars.tmpDirectory.child("actions-meta-cache.json");
-        file.parent().mkdirs();
-
-        if (!file.exists() || Instant.ofEpochMilli(file.lastModified()).plus(1, ChronoUnit.HOURS).isBefore(Instant.now())) {
-            Log.debug("[Bot-Protector] Downloading GitHub meta...", file);
-
-            Http.get("https://api.github.com/meta").block(response -> {
-                file.write(response.getResultAsStream(), false);
-
-                Log.debug("[Bot-Protector] Downloaded cache to @", file);
-            });
-        }
-
-        Set<IPAddressString> addresses = new HashSet<>();
-
-        try (var reader = file.reader()) {
-            for (Jval jval : Jval.read(reader).get("actions").asArray()) {
-                addresses.add(new IPAddressString(jval.asString()));
+        try (InputStream stream = BotProtector.class.getResourceAsStream("/azure.json")) {
+            if (stream != null) {
+                for (Jval value : Jval.read(new InputStreamReader(stream)).get("values").asArray()) {
+                    for (Jval addressPrefixes : value.get("properties").get("addressPrefixes").asArray()) {
+                        addresses.add(new IPAddressString(addressPrefixes.asString()));
+                    }
+                }
             }
         } catch (IOException exception) {
-            throw new RuntimeException(exception);
+            Log.err("Failed to load internal azure addresses", exception);
         }
+        Log.info("[Bot-Protector] Loaded @ azure address masks.", addresses.size());
+    }
 
-        Log.debug("[Bot-Protector] Found @ masks", addresses.size());
-
-        BotProtector.addresses = addresses;
+    @Override
+    public void registerServerCommands(CommandHandler handler) {
+        handler.register("conns", "Displays stats", args -> Log.info("Blocked @ connections", blocked.get()));
     }
 
 }

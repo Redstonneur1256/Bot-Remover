@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "fr.redstonneur1256"
-version = "1.1"
+version = "1.2"
 
 repositories {
     mavenCentral()
@@ -17,4 +17,20 @@ dependencies {
     compileOnly(libs.anuken.mindustry)
     compileOnly(libs.modlib)
     implementation(libs.ipaddress)
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
+tasks.processResources {
+    filesMatching("plugin.json") {
+        expand("version" to project.version)
+    }
+}
+
+tasks.shadowJar {
+    archiveFileName.set("Bot-Remover.jar")
 }
