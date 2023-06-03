@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "fr.redstonneur1256.bot.mixins",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "ServerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

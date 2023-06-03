@@ -1,0 +1,10 @@
+{
+  "name": "bot-protector",
+  "minGameVersion": "142",
+  "author": "Redstonneur1256",
+  "version": "1.1",
+  "main": "fr.redstonneur1256.bot.BotProtector",
+  "dependencies": [
+    "!mod-library"
+  ]
+}

@@ -1,0 +1,11 @@
+[plugins]
+shadow = "com.github.johnrengelman.shadow:8.1.0"
+
+[versions]
+mindustry = "v144"
+
+[libraries]
+anuken-arc = { module = "com.github.Anuken.Arc:arc-core", version.ref = "mindustry" }
+anuken-mindustry = { module = "com.github.Anuken.Mindustry:core", version.ref = "mindustry" }
+ipaddress = "com.github.seancfoley:ipaddress:5.4.0"
+modlib = "com.github.Redstonneur1256.Mindustry-ModLib:Mod:1.4.5"
