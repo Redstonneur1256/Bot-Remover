@@ -1,5 +1,6 @@
 package fr.redstonneur1256.bot;
 
+import arc.Core;
 import arc.Events;
 import arc.struct.Seq;
 import arc.util.CommandHandler;
@@ -26,6 +27,7 @@ public class BotProtector extends Plugin {
 
     public static final AtomicInteger blocked = new AtomicInteger();
     public static Set<IPAddressString> addresses = new HashSet<>();
+    public static boolean logging = Core.settings.getBool("bot-protector-logging", false);
 
     private Seq<BlockListProvider> providers;
 
@@ -42,8 +44,8 @@ public class BotProtector extends Plugin {
             throw new RuntimeException(exception);
         }
 
-        reload();
-        Timer.schedule(() -> Threads.daemon(this::reload), 3600, 3600);
+        reload(true, true);
+        Timer.schedule(() -> Threads.daemon(() -> reload(false, false)), 3600, 3600);
 
         Events.run(EventType.ServerLoadEvent.class, () -> {
             if (Vars.mods.getMod("unifiedmetrics") != null) {
@@ -54,21 +56,26 @@ public class BotProtector extends Plugin {
 
     @Override
     public void registerServerCommands(CommandHandler handler) {
-        handler.register("conns", "Displays stats", args -> Log.info("Blocked @ connections", blocked.get()));
-        handler.register("bl-reload", "Reloads the IP blacklist", args -> Threads.daemon(this::reload));
+        handler.register("bl-stat", "Displays stats", args -> Log.info("Blocked @ connections", blocked.get()));
+        handler.register("bl-log", "Enable logging of blocked connections", args -> {
+            logging = !logging;
+            Core.settings.put("bot-protector-logging", logging);
+            Log.info("Logging is now @", logging ? "enabled" : "disabled");
+        });
+        handler.register("bl-reload", "Reloads the IP blacklist", args -> Threads.daemon(() -> reload(true, true)));
     }
 
-    private void reload() {
+    private void reload(boolean log, boolean debug) {
         Set<IPAddressString> addresses = new HashSet<>();
 
         for (BlockListProvider provider : providers) {
             Set<IPAddressString> found = provider.provide();
             addresses.addAll(found);
 
-            Log.debug("[Bot-Protector] Found @ addresses for blocklist @", found.size(), provider.getName());
+            Log.log(debug ? Log.LogLevel.info : Log.LogLevel.debug, "[Bot-Protector] Found @ addresses for blocklist @", found.size(), provider.getName());
         }
 
-        Log.info("[Bot-Protector] (re)loaded @ addresses", addresses.size());
+        Log.log(log ? Log.LogLevel.info : Log.LogLevel.debug, "[Bot-Protector] (re)loaded @ addresses", addresses.size());
         BotProtector.addresses = addresses;
     }
 
