@@ -2,7 +2,7 @@
 shadow = "com.github.johnrengelman.shadow:8.1.0"
 
 [versions]
-mindustry = "v144"
+mindustry = "v144.3"
 
 [libraries]
 anuken-arc = { module = "com.github.Anuken.Arc:arc-core", version.ref = "mindustry" }
