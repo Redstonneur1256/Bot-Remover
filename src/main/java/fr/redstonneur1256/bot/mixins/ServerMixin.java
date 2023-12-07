@@ -1,17 +1,22 @@
 package fr.redstonneur1256.bot.mixins;
 
-import arc.net.*;
+import arc.net.Connection;
+import arc.net.DcReason;
+import arc.net.NetListener;
+import arc.net.Server;
 import arc.util.Log;
 import fr.redstonneur1256.bot.BotProtector;
-import inet.ipaddr.IPAddressString;
+import fr.redstonneur1256.bot.util.AddressTree;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
@@ -29,9 +34,8 @@ public abstract class ServerMixin {
     private void injectAccept(SocketChannel channel, CallbackInfo ci) {
         try {
             SocketAddress remote = channel.getRemoteAddress();
-
             if (remote instanceof InetSocketAddress) {
-                if (blockedAddress((InetSocketAddress) remote, "TCP")) {
+                if (handleAddress((InetSocketAddress) remote, "TCP")) {
                     ci.cancel();
                     channel.close();
                 }
@@ -48,11 +52,11 @@ public abstract class ServerMixin {
      * Used to determine if the last connection to has done UDP registration was cancelled or not, required because of
      * two different Mixins injection points since we cannot use CaptureLocals due to UdpConnection being private
      */
-    private boolean cancelled;
+    private @Unique boolean cancelled;
 
     @Redirect(method = "update", at = @At(value = "INVOKE", target = "Larc/net/Server;addConnection(Larc/net/Connection;)V"))
     private void redirectAddConnection(Server instance, Connection connection) {
-        cancelled = connection.getRemoteAddressUDP() != null && blockedAddress(connection.getRemoteAddressUDP(), "UDP");
+        cancelled = connection.getRemoteAddressUDP() != null && handleAddress(connection.getRemoteAddressUDP(), "UDP");
 
         if (cancelled) {
             // Do not trigger the listener, it's not triggered for connected so shouldn't be triggered for closed
@@ -79,21 +83,26 @@ public abstract class ServerMixin {
         }
     }
 
-    private boolean blockedAddress(InetSocketAddress remote, String method) {
-        IPAddressString address = new IPAddressString(remote.getAddress().getHostAddress());
+    @Unique
+    private boolean handleAddress(InetSocketAddress remote, String method) {
+        BotProtector protector = BotProtector.instance;
+        if(!protector.active) {
+            return false;
+        }
 
-        if (BotProtector.logging) {
+        byte[] address = remote.getAddress().getAddress();
+        AddressTree tree = remote.getAddress() instanceof Inet4Address ? protector.ipv4tree : protector.ipv6tree;
+
+        if (!tree.find(address)) {
+            return false;
+        }
+
+        if (protector.logging) {
             Log.warn("[Bot-Protector] [@] Blocked connection @", method, remote);
         }
+        protector.blocked.incrementAndGet();
 
-        for (IPAddressString blacklisted : BotProtector.addresses) {
-            if (blacklisted.contains(address)) {
-                BotProtector.blocked.incrementAndGet();
-                return true;
-            }
-        }
-
-        return false;
+        return true;
     }
 
 }

@@ -8,12 +8,14 @@ import java.io.InputStreamReader;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class RawBlockListProvider implements BlockListProvider {
+public class CsvBlockListProvider implements BlockListProvider {
 
     private final String url;
+    private final int column;
 
-    public RawBlockListProvider(String url) {
+    public CsvBlockListProvider(String url, int column) {
         this.url = url;
+        this.column = column;
     }
 
     @Override
@@ -25,7 +27,10 @@ public class RawBlockListProvider implements BlockListProvider {
     public Set<String> provide(HttpCache cache) throws IOException {
         return cache.get(url, stream -> new BufferedReader(new InputStreamReader(stream))
                 .lines()
-                .filter(line -> !line.isEmpty())
+                .filter(line -> !line.isEmpty() && line.charAt(0) != '#')
+                .map(line -> line.split(","))
+                .filter(parts -> parts.length >= column)
+                .map(parts -> parts[column])
                 .collect(Collectors.toSet()));
     }
 

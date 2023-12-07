@@ -14,7 +14,7 @@ public class UnifiedMetricBlockedCollector implements Collector {
     @NotNull
     @Override
     public List<Metric> collect() {
-        return Collections.singletonList(new CounterMetric("bot_protector_blocked_connections", Collections.emptyMap(), BotProtector.blocked.get()));
+        return Collections.singletonList(new CounterMetric("bot_protector_blocked_connections", Collections.emptyMap(), BotProtector.instance.blocked.get()));
     }
 
 }

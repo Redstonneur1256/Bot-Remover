@@ -1,12 +1,9 @@
 package fr.redstonneur1256.bot.provider;
 
-import arc.util.Http;
-import arc.util.Log;
-import arc.util.Strings;
 import arc.util.serialization.Jval;
-import inet.ipaddr.IPAddressString;
+import fr.redstonneur1256.bot.util.HttpCache;
 
-import java.io.InputStreamReader;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -24,27 +21,18 @@ public class GoogleCloudBlockListProvider implements BlockListProvider {
     }
 
     @Override
-    public Set<IPAddressString> provide() {
-        try {
-            Set<IPAddressString> addresses = new HashSet<>();
+    public Set<String> provide(HttpCache cache) throws IOException {
+        Set<String> addresses = new HashSet<>();
+        Jval json = cache.getJson(url);
 
-            Http.get(url).header("User-Agent", "BotProtector").block(response -> {
-                Jval json = Jval.read(new InputStreamReader(response.getResultAsStream()));
-
-                for (Jval prefix : json.get("prefixes").asArray()) {
-                    Jval ipv4 = prefix.get("ipv4Prefix");
-                    Jval ipv6 = prefix.get("ipv6Prefix");
-                    if (ipv4 != null && ipv4.isString()) addresses.add(new IPAddressString(ipv4.asString()));
-                    if (ipv6 != null && ipv6.isString()) addresses.add(new IPAddressString(ipv6.asString()));
-                }
-            });
-
-            return addresses;
-        } catch (Throwable exception) {
-            Log.err("[Bot-Protector] Unable to load blocklist from @:\n@", url, Strings.getStackTrace(exception));
-
-            return new HashSet<>();
+        for (Jval prefix : json.get("prefixes").asArray()) {
+            Jval ipv4 = prefix.get("ipv4Prefix");
+            Jval ipv6 = prefix.get("ipv6Prefix");
+            if (ipv4 != null && ipv4.isString()) addresses.add(ipv4.asString());
+            if (ipv6 != null && ipv6.isString()) addresses.add(ipv6.asString());
         }
+
+        return addresses;
     }
 
 }
