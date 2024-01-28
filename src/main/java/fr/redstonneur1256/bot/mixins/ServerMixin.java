@@ -4,9 +4,9 @@ import arc.net.Connection;
 import arc.net.DcReason;
 import arc.net.NetListener;
 import arc.net.Server;
+import arc.net.UdpConnection;
 import arc.util.Log;
 import fr.redstonneur1256.bot.BotProtector;
-import fr.redstonneur1256.bot.util.AddressTree;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -16,7 +16,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
@@ -83,17 +82,28 @@ public abstract class ServerMixin {
         }
     }
 
+    @Redirect(method = "update", at = @At(value = "INVOKE", target = "Larc/net/UdpConnection;readFromAddress()Ljava/net/InetSocketAddress;"))
+    private InetSocketAddress redirectReadFromAddress(UdpConnection instance) throws IOException {
+        InetSocketAddress address = instance.readFromAddress();
+
+        BotProtector protector = BotProtector.instance;
+
+        if (protector.active && protector.isBlocked(address)) {
+            protector.blockedPackets.incrementAndGet();
+            protector.blockedBytes.addAndGet(instance.readBuffer.position());
+            return null; // if returning null then it's just ignored by arc
+        }
+
+        return address;
+    }
+
     @Unique
     private boolean handleAddress(InetSocketAddress remote, String method) {
         BotProtector protector = BotProtector.instance;
-        if(!protector.active) {
+        if (!protector.active) {
             return false;
         }
-
-        byte[] address = remote.getAddress().getAddress();
-        AddressTree tree = remote.getAddress() instanceof Inet4Address ? protector.ipv4tree : protector.ipv6tree;
-
-        if (!tree.find(address)) {
+        if (!protector.isBlocked(remote)) {
             return false;
         }
 

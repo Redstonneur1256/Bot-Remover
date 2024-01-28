@@ -1,19 +1,22 @@
 package fr.redstonneur1256.bot.util;
 
-public class AddressTree {
+public class RadixTree {
 
-    private RadixTreeNode root;
+    private Node root;
 
-    public AddressTree() {
-        this.root = new RadixTreeNode();
+    public RadixTree() {
+        root = new Node();
     }
 
-    public void set(byte[] key, byte[] mask) {
+    public void set(byte[] key, int bits) {
+        Node node = root;
         int bit = 0;
 
-        RadixTreeNode node = root;
+        while (bit < 8 * key.length && bit < bits) {
+            if (node.hasValue) {
+                return; // lookup will already stop here, no need to allocate nodes further
+            }
 
-        while (bit < 8 * key.length && (mask[bit / 8] & (0x80 >> (bit % 8))) != 0) {
             node = (key[bit / 8] & (0x80 >> (bit % 8))) != 0 ? node.left() : node.right();
 
             bit++;
@@ -27,8 +30,7 @@ public class AddressTree {
     }
 
     public boolean find(byte[] value) {
-        RadixTreeNode node = root;
-
+        Node node = root;
         int bit = 0;
 
         while (node != null) {
@@ -45,20 +47,22 @@ public class AddressTree {
         return root.getNodeCount();
     }
 
-    private static class RadixTreeNode {
-        private RadixTreeNode left, right;
+    private static class Node {
+
+        private Node left;
+        private Node right;
         private boolean hasValue;
 
-        private RadixTreeNode left() {
+        private Node left() {
             if (left == null) {
-                left = new RadixTreeNode();
+                left = new Node();
             }
             return left;
         }
 
-        private RadixTreeNode right() {
+        private Node right() {
             if (right == null) {
-                right = new RadixTreeNode();
+                right = new Node();
             }
             return right;
         }
@@ -68,4 +72,5 @@ public class AddressTree {
         }
 
     }
+
 }

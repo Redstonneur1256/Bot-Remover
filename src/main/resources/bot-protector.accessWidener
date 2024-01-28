@@ -1,0 +1,5 @@
+accessWidener v2 named
+
+#pain
+accessible class arc/net/UdpConnection
+accessible field arc/net/UdpConnection readBuffer Ljava/nio/ByteBuffer;

@@ -15,29 +15,34 @@ import fr.redstonneur1256.bot.provider.BlockListProvider;
 import fr.redstonneur1256.bot.provider.CsvBlockListProvider;
 import fr.redstonneur1256.bot.provider.GoogleCloudBlockListProvider;
 import fr.redstonneur1256.bot.provider.RawBlockListProvider;
-import fr.redstonneur1256.bot.util.AddressTree;
 import fr.redstonneur1256.bot.util.HttpCache;
+import fr.redstonneur1256.bot.util.RadixTree;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.mod.Plugin;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class BotProtector extends Plugin {
 
     public static BotProtector instance;
 
-    public final AtomicInteger blocked = new AtomicInteger();
+    public final AtomicLong blocked = new AtomicLong();
+    public final AtomicLong blockedPackets = new AtomicLong();
+    public final AtomicLong blockedBytes = new AtomicLong();
+
     public boolean active = Core.settings.getBool("bot-protector-active", true);
     public boolean logging = Core.settings.getBool("bot-protector-logging", false);
-    public AddressTree ipv4tree;
-    public AddressTree ipv6tree;
+
     public Seq<BlockListProvider> providers;
+    public RadixTree ipv4tree;
+    public RadixTree ipv6tree;
 
     @Override
     public void init() {
@@ -106,8 +111,8 @@ public class BotProtector extends Plugin {
 
         Time.mark();
 
-        AddressTree ipv4tree = new AddressTree();
-        AddressTree ipv6tree = new AddressTree();
+        RadixTree ipv4tree = new RadixTree();
+        RadixTree ipv6tree = new RadixTree();
 
         for (String address : addresses) {
             try {
@@ -115,12 +120,9 @@ public class BotProtector extends Plugin {
                 InetAddress addr = InetAddress.getByName(parts[0]);
                 int subnet = Integer.parseInt(parts[1]);
 
-                AddressTree tree = addr instanceof Inet4Address ? ipv4tree : ipv6tree;
+                RadixTree tree = addr instanceof Inet4Address ? ipv4tree : ipv6tree;
 
-                byte[] key = addr.getAddress();
-                byte[] mask = getAddressMask(key.length, subnet);
-
-                tree.set(key, mask);
+                tree.set(addr.getAddress(), subnet);
             } catch (UnknownHostException e) {
                 throw new RuntimeException(e);
             }
@@ -134,12 +136,10 @@ public class BotProtector extends Plugin {
         Log.log(log ? Log.LogLevel.info : Log.LogLevel.debug, "[Bot-Protector] (re)loaded @ addresses", addresses.size());
     }
 
-    private byte[] getAddressMask(int length, int subnet) {
-        byte[] mask = new byte[length];
-        for (int bit = 0; bit < subnet; bit++) {
-            mask[bit / 8] |= (byte) (0x80 >> (bit % 8));
-        }
-        return mask;
+    public boolean isBlocked(InetSocketAddress remote) {
+        byte[] address = remote.getAddress().getAddress();
+        RadixTree tree = remote.getAddress() instanceof Inet4Address ? ipv4tree : ipv6tree;
+        return tree.find(address);
     }
 
 }

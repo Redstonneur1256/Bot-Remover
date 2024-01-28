@@ -1,10 +1,17 @@
+import io.github.redstonneur1256.gaw.AccessWidenerExtension
+
 plugins {
     `java-library`
     alias(libs.plugins.shadow)
+    id("io.github.redstonneur1256.gradle-access-widener") version ("0.3")
 }
 
 group = "fr.redstonneur1256"
 version = System.getenv("GITHUB_VERSION") ?: "dev"
+
+configure<AccessWidenerExtension> {
+    paths = files("src/main/resources/bot-protector.accessWidener")
+}
 
 repositories {
     mavenCentral()
