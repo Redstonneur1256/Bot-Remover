@@ -3,7 +3,7 @@ import io.github.redstonneur1256.gaw.AccessWidenerExtension
 plugins {
     `java-library`
     alias(libs.plugins.shadow)
-    id("io.github.redstonneur1256.gradle-access-widener") version ("0.3")
+    id("io.github.redstonneur1256.gradle-access-widener") version ("0.3.1")
 }
 
 group = "fr.redstonneur1256"
