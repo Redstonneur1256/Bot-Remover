@@ -29,6 +29,9 @@ public abstract class ServerMixin {
     @Shadow
     protected abstract void addConnection(Connection connection);
 
+    @Shadow
+    private Connection[] connections;
+
     @Inject(method = "acceptOperation", at = @At("HEAD"), cancellable = true)
     private void injectAccept(SocketChannel channel, CallbackInfo ci) {
         try {
@@ -82,16 +85,27 @@ public abstract class ServerMixin {
         }
     }
 
+
     @Redirect(method = "update", at = @At(value = "INVOKE", target = "Larc/net/UdpConnection;readFromAddress()Ljava/net/InetSocketAddress;"))
     private InetSocketAddress redirectReadFromAddress(UdpConnection instance) throws IOException {
         InetSocketAddress address = instance.readFromAddress();
 
+        for (Connection connection : connections) {
+            if (address.equals(connection.udpRemoteAddress)) {
+                return address; // actual connection, let it live
+            }
+        }
+
         BotProtector protector = BotProtector.instance;
 
-        if (protector.active && protector.isBlocked(address)) {
+        if (protector.isBlocked(address)) {
             protector.blockedPackets.incrementAndGet();
             protector.blockedBytes.addAndGet(instance.readBuffer.position());
             return null; // if returning null then it's just ignored by arc
+        }
+
+        if (protector.packetTracker.increment()) {
+            protector.incrementMode();
         }
 
         return address;
@@ -100,17 +114,16 @@ public abstract class ServerMixin {
     @Unique
     private boolean handleAddress(InetSocketAddress remote, String method) {
         BotProtector protector = BotProtector.instance;
-        if (!protector.active) {
-            return false;
-        }
+
         if (!protector.isBlocked(remote)) {
             return false;
         }
 
-        if (protector.logging) {
-            Log.warn("[Bot-Protector] [@] Blocked connection @", method, remote);
+        if (protector.connectionTracker.increment()) {
+            protector.incrementMode();
         }
-        protector.blocked.incrementAndGet();
+
+        protector.blockConnections.incrementAndGet();
 
         return true;
     }
